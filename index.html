@@ -1,0 +1,1565 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Şantiye Defteri">
+<meta name="theme-color" content="#2A5C7D">
+<title>Şantiye Defteri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: tek sütun, telefon öncelikli. Üstte şantiye filtresi, altta dört sekme: Harcama / Hakediş / Rapor / Şantiyeler. */
+:root {
+  --bg: #E8ECEE;
+  --surface: #F7F9FA;
+  --field: #FFFFFF;
+  --ink: #1A2227;
+  --muted: #56646E;
+  --line: #C9D1D6;
+  --soft: #DCE3E7;
+  --accent: #2A5C7D;
+  --accent-ink: #FFFFFF;
+  --pocket: #8F4A06;
+  --pocket-bg: #F9E3C6;
+  --card: #1F4F9E;
+  --card-bg: #DCE7F8;
+  --cust: #5B3A91;
+  --cust-bg: #E8DFF6;
+  --good: #1B7248;
+  --bad: #AE2F1C;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12171A; --surface: #1B2226; --field: #141A1D; --ink: #E6EBEE; --muted: #96A4AE;
+    --line: #2F3B42; --soft: #252F35; --accent: #7DB4D6; --accent-ink: #0D1A22;
+    --pocket: #F0B36B; --pocket-bg: #3A2C17; --card: #9CC0F5; --card-bg: #1E2B45;
+    --cust: #C9B0F2; --cust-bg: #2F2547;
+    --good: #5CC796; --bad: #F08A78;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12171A; --surface: #1B2226; --field: #141A1D; --ink: #E6EBEE; --muted: #96A4AE;
+  --line: #2F3B42; --soft: #252F35; --accent: #7DB4D6; --accent-ink: #0D1A22;
+  --pocket: #F0B36B; --pocket-bg: #3A2C17; --card: #9CC0F5; --card-bg: #1E2B45;
+  --cust: #C9B0F2; --cust-bg: #2F2547;
+  --good: #5CC796; --bad: #F08A78;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+.wrap {
+  max-width: 680px; margin: 0 auto;
+  padding-block: 16px 104px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+
+.top { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.top h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1; letter-spacing: 0.01em; text-wrap: balance; }
+
+label, .lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 4px; }
+input[type="text"], input[type="date"], select, textarea {
+  width: 100%; min-height: 46px; padding: 8px 12px; font-size: 16px;
+  background: var(--field); border: 1px solid var(--line); border-radius: 6px;
+}
+textarea { resize: vertical; min-height: 68px; line-height: 1.4; }
+input:focus-visible, select:focus-visible, button:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+.panel h2, .section-title { margin: 0 0 10px; font-family: var(--font-display); font-weight: 600; font-size: 22px; letter-spacing: 0.01em; }
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 14px; }
+.summary > div { padding: 12px 12px 10px; min-width: 0; }
+.summary > div + div { border-left: 1px solid var(--line); }
+.summary .k { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); }
+.summary .v { font-family: var(--font-display); font-weight: 600; font-size: clamp(19px, 5.6vw, 28px); line-height: 1.15; margin-top: 2px; overflow-wrap: anywhere; }
+.summary .v.pocket { color: var(--pocket); }
+.summary .v.cardc { color: var(--card); }
+.summary > .extra { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 6px 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); padding: 9px 12px; }
+.summary > .extra b { color: var(--ink); font-weight: 600; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.grid .full { grid-column: 1 / -1; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--field); min-height: 46px; }
+.seg.four label:nth-child(n+3) { border-top: 1px solid var(--line); }
+.seg label { position: relative; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 44px; font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--ink); cursor: pointer; text-align: center; padding: 0 6px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label + label { border-left: 1px solid var(--line); }
+.seg.four label:nth-child(odd) { border-left: 0; }
+.seg label:has(input:checked) { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.seg label:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: -3px; }
+.tog { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 14px; background: var(--surface); }
+.tog button { min-height: 46px; border: 0; background: none; font-weight: 600; cursor: pointer; }
+.tog button + button { border-left: 1px solid var(--line); }
+.tog button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.btn { min-height: 48px; padding: 0 18px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 16px; cursor: pointer; }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.small { min-height: 40px; font-size: 14px; padding: 0 12px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.actions .btn:first-child { flex: 1 1 160px; }
+.msg { min-height: 20px; margin: 8px 0 0; font-size: 13px; color: var(--bad); }
+.hint { margin: 0; font-size: 13px; color: var(--muted); min-height: 18px; }
+.notice { background: var(--pocket-bg); color: var(--pocket); border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px; }
+
+.day { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 18px 0 6px; font-family: var(--font-display); font-weight: 600; font-size: 19px; }
+.day span:last-child { font-size: 17px; color: var(--muted); }
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 14px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row-title { font-weight: 500; overflow-wrap: anywhere; }
+.row-meta { grid-column: 1; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; }
+.row-sub { grid-column: 1 / -1; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.row-note { grid-column: 1 / -1; font-size: 13px; background: var(--bg); border-radius: 6px; padding: 6px 10px; margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.row-amt { grid-row: 1; grid-column: 2; font-family: var(--font-display); font-weight: 600; font-size: 21px; text-align: right; }
+.row-act { grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.link { background: none; border: 0; padding: 8px 10px 8px 0; min-height: 40px; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; }
+.link.danger { color: var(--bad); }
+.ask { font-size: 13px; color: var(--bad); font-weight: 600; margin-right: 4px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--pocket-bg); color: var(--pocket); }
+.pill.cardp { background: var(--card-bg); color: var(--card); }
+.pill.custp { background: var(--cust-bg); color: var(--cust); }
+.pill.arch { background: var(--soft); color: var(--muted); }
+.empty { padding: 22px 16px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: 8px; margin-bottom: 14px; }
+.empty strong { display: block; color: var(--ink); font-family: var(--font-display); font-size: 21px; font-weight: 600; margin-bottom: 4px; }
+.empty .btn { margin-top: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+
+.site-head h2 { margin: 0; font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1.1; }
+.site-head p { margin: 2px 0 12px; color: var(--muted); }
+.figs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 14px; }
+.fig { padding: 14px; min-width: 0; }
+.fig:nth-child(even) { border-left: 1px solid var(--line); }
+.fig:nth-child(n+3) { border-top: 1px solid var(--line); }
+.fig .k { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); }
+.fig .v { font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 8vw, 36px); line-height: 1.1; overflow-wrap: anywhere; }
+.pos { color: var(--good); }
+.neg { color: var(--bad); }
+.bar { height: 10px; background: var(--soft); border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.progress .line { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 6px; flex-wrap: wrap; }
+.cats { display: grid; gap: 10px; }
+.cat .line { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin-bottom: 4px; }
+.cat .line span:last-child { font-weight: 600; }
+.st-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.st-row:first-child { border-top: 0; padding-top: 0; }
+.st-row span:first-child { min-width: 0; }
+.st-row span:last-child { text-align: right; white-space: nowrap; font-weight: 500; }
+.st-row.sub { padding: 3px 0 3px 14px; border-top: 0; font-size: 13px; color: var(--muted); }
+.st-row.strong { font-weight: 600; font-size: 16px; }
+.st-row.strong span:last-child { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+.scard { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+.scard h3 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 600; }
+.scard .emp { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+.scard.total { border-color: var(--accent); }
+.mini { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 8px; margin-bottom: 12px; }
+.mini .k { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); }
+.mini .v { font-family: var(--font-display); font-weight: 600; font-size: clamp(19px, 5.5vw, 24px); overflow-wrap: anywhere; }
+
+.kes-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.kal-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.kal-row .c-all { grid-column: 1 / -1; }
+.kal-row .c-2 { grid-column: span 2; }
+.kal-row .c-4 { grid-column: span 4; }
+.kal-row .tot { font-size: 14px; font-weight: 600; }
+.kal-row .rm { justify-self: end; grid-column: span 2; }
+.calc { background: var(--bg); border-radius: 6px; padding: 10px 12px; margin: 12px 0 0; }
+.calc .st-row { padding: 6px 0; font-size: 14px; }
+
+.grid > * { min-width: 0; }
+input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.back { padding-left: 0; margin-bottom: 4px; }
+.sr { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.filebtn { display: flex; align-items: center; justify-content: center; margin: 0; letter-spacing: 0; cursor: pointer; }
+.sr:focus-visible + .filebtn { outline: 3px solid var(--accent); outline-offset: 1px; }
+.doc-row { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+.doc-row.dup { border-color: var(--pocket); }
+.doc-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 10px; }
+.doc-head select { width: auto; min-width: 0; flex: 1 1 150px; }
+.doc-flags { display: flex; gap: 6px; flex-wrap: wrap; margin: -4px 0 10px; }
+.chk { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; color: var(--ink); letter-spacing: 0; min-height: 44px; font-weight: 600; }
+.chk input { width: 22px; height: 22px; }
+.bad { border-color: var(--bad) !important; box-shadow: 0 0 0 1px var(--bad); }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--surface); border-top: 1px solid var(--line); padding: 0 max(8px, env(safe-area-inset-left, 0px)) env(safe-area-inset-bottom, 0px) max(8px, env(safe-area-inset-right, 0px)); }
+.tabs-in { max-width: 680px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); }
+.tabs button { min-height: 58px; background: none; border: 0; border-top: 3px solid transparent; font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: 0.02em; color: var(--muted); cursor: pointer; padding: 0 2px; }
+.tabs button[aria-current="page"] { color: var(--accent); border-top-color: var(--accent); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 6px; font-size: 14px; z-index: 8; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+html { color-scheme: light; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+:root { padding-top: env(safe-area-inset-top, 0px); }
+.toprow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toprow .link { padding-right: 0; }
+.gate { max-width: 420px; margin: 0 auto; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 28px max(16px, env(safe-area-inset-left, 0px)); }
+.gate h1 { margin: 0 0 16px; font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1; }
+.gate .f { margin-bottom: 12px; }
+.gate input { width: 100%; min-height: 46px; padding: 8px 12px; font-size: 16px; background: var(--field); border: 1px solid var(--line); border-radius: 6px; }
+body.locked .wrap, body.locked .tabs { display: none; }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+</head>
+<body class="locked">
+<div id="gate" class="gate" lang="tr" hidden>
+  <h1>Şantiye Defteri</h1>
+  <form id="gSetup" class="panel" autocomplete="off" hidden>
+    <h2>Bağlantı ayarı</h2>
+    <p class="hint" style="margin-bottom:12px">Supabase proje adresini ve "publishable" anahtarını yapıştır. Bu cihazda bir kez girmen yeterli.</p>
+    <div class="f"><label for="gUrl">PROJE ADRESİ</label><input type="text" id="gUrl" placeholder="https://xxxx.supabase.co" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <div class="f"><label for="gKey">PUBLISHABLE ANAHTAR</label><input type="text" id="gKey" placeholder="sb_publishable_..." autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <button class="btn" type="submit" style="width:100%">Kaydet ve devam et</button>
+  </form>
+  <form id="gLogin" class="panel" hidden>
+    <h2>Giriş</h2>
+    <div class="f"><label for="gEmail">E-POSTA</label><input type="email" id="gEmail" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <div class="f"><label for="gPass">ŞİFRE</label><input type="password" id="gPass" autocomplete="current-password"></div>
+    <button class="btn" type="submit" id="gLoginBtn" style="width:100%">Giriş yap</button>
+    <button class="link" type="button" id="gReset" style="margin-top:8px">Bağlantı ayarını değiştir</button>
+  </form>
+  <p class="msg" id="gMsg" role="alert"></p>
+</div>
+<div class="wrap" lang="tr">
+  <header class="top">
+    <div class="toprow"><h1>Şantiye Defteri</h1><button class="link" type="button" id="logout">Çıkış</button></div>
+    <div>
+      <label for="siteFilter">ŞANTİYE</label>
+      <select id="siteFilter"></select>
+    </div>
+  </header>
+
+  <div id="banner" class="notice" hidden></div>
+  <div id="bkNotice" class="notice" hidden><span id="bkNoticeText"></span> <button class="link" type="button" data-act="tab" data-tab="sites" style="padding:0;min-height:0">Yedek al</button></div>
+
+  <!-- HARCAMA -->
+  <section id="view-spend">
+    <div class="summary" aria-label="Harcama özeti">
+      <div><div class="k">Toplam harcama</div><div class="v num" id="sumTotal">₺0</div></div>
+      <div><div class="k">Cebimden</div><div class="v num pocket" id="sumPocket">₺0</div></div>
+      <div><div class="k">Kredi kartı</div><div class="v num cardc" id="sumCard">₺0</div></div>
+      <div class="extra"><span>Kasadan <b class="num" id="sumKasa">₺0</b></span><span>Müşteri ödedi <b class="num" id="sumCust">₺0</b></span><span>İçindeki KDV <b class="num" id="sumVat">₺0</b></span></div>
+    </div>
+
+    <div id="paneForm">
+    <div id="noSites" class="empty" hidden>
+      <strong>Önce bir şantiye ekle</strong>
+      Her şantiyenin kendi işvereni ve kendi hesabı olur.
+      <div><button class="btn" type="button" data-act="tab" data-tab="sites">Şantiye ekle</button></div>
+    </div>
+
+    <form id="spendForm" class="panel" autocomplete="off">
+      <h2 id="spendFormTitle">Harcama ekle</h2>
+      <div class="grid">
+        <div>
+          <label for="fDate">TARİH</label>
+          <input type="date" id="fDate" required>
+        </div>
+        <div>
+          <label for="fCat">KATEGORİ</label>
+          <select id="fCat"></select>
+        </div>
+        <div class="full">
+          <label for="fSite">ŞANTİYE</label>
+          <select id="fSite" required></select>
+        </div>
+        <div class="full">
+          <label for="fWork">İŞ KALEMİ (isteğe bağlı)</label>
+          <select id="fWork"></select>
+        </div>
+        <div class="full">
+          <label for="fDesc">NE İÇİN?</label>
+          <input type="text" id="fDesc" placeholder="Örn. 20 torba çimento, elektrikçi günlüğü">
+        </div>
+        <div>
+          <label for="fAmount">TUTAR (₺, KDV DAHİL)</label>
+          <input type="text" id="fAmount" inputmode="decimal" placeholder="0" required>
+        </div>
+        <div>
+          <label for="fVat">KDV ORANI</label>
+          <select id="fVat">
+            <option value="0">KDV yok</option>
+            <option value="1">%1</option>
+            <option value="10">%10</option>
+            <option value="20">%20</option>
+          </select>
+        </div>
+        <div class="full"><p class="hint num" id="vatHint"></p></div>
+        <div class="full">
+          <span class="lbl" id="paidLbl">KİM ÖDEDİ?</span>
+          <div class="seg four" role="radiogroup" aria-labelledby="paidLbl">
+            <label><input type="radio" name="paidBy" value="kasa" checked>Kasadan</label>
+            <label><input type="radio" name="paidBy" value="cep">Cebimden</label>
+            <label><input type="radio" name="paidBy" value="kart">Kredi kartı</label>
+            <label><input type="radio" name="paidBy" value="musteri">Müşteri ödedi</label>
+          </div>
+          <p class="hint" id="paidHint" style="margin-top:6px"></p>
+        </div>
+        <div class="full">
+          <label for="fNote">NOT (isteğe bağlı)</label>
+          <textarea id="fNote" rows="2" placeholder="Bu kalemle ilgili küçük notlar"></textarea>
+        </div>
+      </div>
+      <p class="msg" id="spendMsg" role="alert"></p>
+      <div class="actions">
+        <button class="btn" type="submit" id="spendBtn">Kaydet</button>
+        <button class="btn ghost" type="button" id="spendCancel" hidden>Vazgeç</button>
+      </div>
+    </form>
+    </div>
+
+    <div id="spendList"></div>
+  </section>
+
+  <!-- HAKEDİŞ -->
+  <section id="view-hk" hidden>
+    <div id="hkGate"></div>
+    <div id="hkMain" hidden>
+      <div class="site-head" id="hkHead"></div>
+      <div class="tog" role="group" aria-label="Kayıt türü">
+        <button type="button" data-act="hk-pane" data-pane="hk" id="togHk">Hakediş</button>
+        <button type="button" data-act="hk-pane" data-pane="pay" id="togPay">Tahsilat (gelen para)</button>
+      </div>
+
+      <div id="paneHk">
+        <form id="hkForm" class="panel" autocomplete="off">
+          <h2 id="hkFormTitle">Hakediş ekle</h2>
+          <div class="grid">
+            <div>
+              <label for="hDate">TARİH</label>
+              <input type="date" id="hDate" required>
+            </div>
+            <div>
+              <label for="hTitle">HAKEDİŞ ADI</label>
+              <input type="text" id="hTitle" placeholder="Örn. 1. Hakediş">
+            </div>
+            <div class="full">
+              <span class="lbl" id="hkModeLbl">İŞÇİLİK HESABI</span>
+              <div class="seg" role="radiogroup" aria-labelledby="hkModeLbl">
+                <label><input type="radio" name="hkMode" value="gotur" checked>Götürü bedel</label>
+                <label><input type="radio" name="hkMode" value="birim">Birim fiyat</label>
+              </div>
+            </div>
+            <div id="hkGotur" class="full">
+              <label for="hAmount">TUTAR (₺, KDV HARİÇ)</label>
+              <input type="text" id="hAmount" inputmode="decimal" placeholder="0">
+            </div>
+            <div id="hkBirim" class="full" hidden>
+              <span class="lbl">İŞ KALEMLERİ (KDV HARİÇ)</span>
+              <div id="kalemList"></div>
+              <button class="btn ghost small" type="button" id="kalemAdd">+ Kalem ekle</button>
+            </div>
+            <div class="full">
+              <label for="hVat">KDV ORANI</label>
+              <select id="hVat">
+                <option value="0">KDV yok</option>
+                <option value="1">%1</option>
+                <option value="10">%10</option>
+                <option value="20" selected>%20</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <span class="lbl">KESİNTİLER (varsa)</span>
+            <div id="kesList"></div>
+            <button class="btn ghost small" type="button" id="kesAdd">+ Kesinti ekle</button>
+            <datalist id="kesNames">
+              <option value="Teminat kesintisi"></option>
+              <option value="Stopaj"></option>
+              <option value="Damga vergisi"></option>
+              <option value="Gecikme cezası"></option>
+            </datalist>
+            <p class="hint" style="margin-top:6px">Peşin ve müşteri ödemelerini kesinti olarak girme. Onlar Tahsilat bölümünden otomatik düşülür.</p>
+          </div>
+          <div class="calc" id="hkCalc" aria-live="polite"></div>
+          <div style="margin-top:14px">
+            <label for="hNote">NOT (isteğe bağlı)</label>
+            <textarea id="hNote" rows="2" placeholder="Bu hakedişle ilgili küçük notlar"></textarea>
+          </div>
+          <p class="msg" id="hkMsg" role="alert"></p>
+          <div class="actions">
+            <button class="btn" type="submit" id="hkBtn">Hakedişi kaydet</button>
+            <button class="btn ghost" type="button" id="hkCancel" hidden>Vazgeç</button>
+          </div>
+        </form>
+        <div id="hkList"></div>
+      </div>
+
+      <div id="panePay" hidden>
+        <form id="payForm" class="panel" autocomplete="off">
+          <h2>Gelen para ekle</h2>
+          <div class="grid">
+            <div>
+              <label for="pDate">TARİH</label>
+              <input type="date" id="pDate" required>
+            </div>
+            <div>
+              <label for="pAmount">TUTAR (₺)</label>
+              <input type="text" id="pAmount" inputmode="decimal" placeholder="0" required>
+            </div>
+            <div class="full">
+              <label for="pKind">TÜR</label>
+              <select id="pKind">
+                <option value="odeme">Havale / nakit ödeme</option>
+                <option value="pesin">Peşin ödeme / avans</option>
+              </select>
+              <p class="hint" style="margin-top:6px">Müşterinin kendi kartıyla ödediği malzemeyi Harcama sekmesinde "Müşteri ödedi" seçerek gir. Ayrıca tahsilat girme.</p>
+            </div>
+            <div class="full">
+              <label for="pNote">NOT (isteğe bağlı)</label>
+              <textarea id="pNote" rows="2" placeholder="Örn. 1. hakediş ödemesi"></textarea>
+            </div>
+          </div>
+          <p class="msg" id="payMsg" role="alert"></p>
+          <div class="actions"><button class="btn" type="submit" id="payBtn">Kaydet</button></div>
+        </form>
+        <div id="payList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RAPOR -->
+  <section id="view-report" hidden>
+    <div id="reportBody"></div>
+    <div id="exportBox" class="actions" hidden>
+      <button class="btn ghost" type="button" data-act="export">Excel için indir (CSV)</button>
+    </div>
+  </section>
+
+  <!-- ŞANTİYELER -->
+  <section id="view-sites" hidden>
+    <div id="sitesHome">
+    <form id="siteForm" class="panel" autocomplete="off">
+      <h2 id="siteFormTitle">Şantiye ekle</h2>
+      <div class="grid">
+        <div class="full">
+          <label for="sName">ŞANTİYE ADI</label>
+          <input type="text" id="sName" placeholder="Örn. Sungurlu Fabrika" required>
+        </div>
+        <div class="full">
+          <label for="sEmp">İŞVEREN</label>
+          <input type="text" id="sEmp" placeholder="Örn. Mustafa Bey">
+        </div>
+        <div class="full">
+          <label for="sContract">SÖZLEŞME BEDELİ (₺, KDV HARİÇ, istersen boş bırak)</label>
+          <input type="text" id="sContract" inputmode="decimal" placeholder="0">
+        </div>
+      </div>
+      <p class="msg" id="siteMsg" role="alert"></p>
+      <div class="actions">
+        <button class="btn" type="submit" id="siteBtn">Şantiye ekle</button>
+        <button class="btn ghost" type="button" id="siteCancel" hidden>Vazgeç</button>
+      </div>
+    </form>
+    <div id="siteList"></div>
+    <div class="panel" id="bkPanel" style="margin-top:14px">
+      <h2>Yedek</h2>
+      <p class="hint" id="bkInfo" style="margin-bottom:12px"></p>
+      <div class="actions">
+        <button class="btn" type="button" id="bkDownload">Yedek indir</button>
+        <input class="sr" type="file" id="bkFile" accept=".json,application/json">
+        <label class="btn ghost filebtn" for="bkFile">Yedekten geri yükle</label>
+      </div>
+      <div id="bkConfirm" hidden style="margin-top:12px">
+        <div class="notice" id="bkSummary"></div>
+        <div class="actions"><button class="btn" type="button" id="bkYes">Evet, geri yükle</button><button class="btn ghost" type="button" id="bkNo">Vazgeç</button></div>
+      </div>
+      <p class="msg" id="bkMsg" role="alert"></p>
+    </div>
+    </div>
+
+    <!-- Şantiye sayfası: iş kalemleri -->
+    <div id="sitePage" hidden>
+      <button class="link back" type="button" data-act="sites-home">← Tüm şantiyeler</button>
+      <div class="site-head"><h2 id="spTitle"></h2><p id="spSub"></p></div>
+      <div id="spSummary"></div>
+      <form id="workForm" class="panel" autocomplete="off">
+        <h2 id="workFormTitle">İş kalemi ekle</h2>
+        <div class="grid">
+          <div class="full">
+            <label for="wName">İŞ KALEMİ ADI</label>
+            <input type="text" id="wName" placeholder="Örn. Elektrik tesisatı, Alçıpan, Boya" required>
+          </div>
+        </div>
+        <p class="msg" id="workMsg" role="alert"></p>
+        <div class="actions">
+          <button class="btn" type="submit" id="workBtn">İş kalemi ekle</button>
+          <button class="btn ghost" type="button" id="workCancel" hidden>Vazgeç</button>
+        </div>
+      </form>
+      <div id="workList"></div>
+    </div>
+
+    <!-- İş kalemi sayfası -->
+    <div id="workPage" hidden>
+      <button class="link back" type="button" data-act="site-page" id="wpBack">← Şantiye</button>
+      <div class="site-head"><p id="wpCrumb" style="margin:0 0 2px"></p><h2 id="wpTitle"></h2></div>
+      <div id="wpSummary" style="margin-top:12px"></div>
+      <div class="actions" style="margin-bottom:14px">
+        <button class="btn" type="button" data-act="work-add-expense">Bu işe harcama ekle</button>
+      </div>
+      <div class="panel">
+        <label for="wpNote">NOTLAR</label>
+        <textarea id="wpNote" rows="5" placeholder="Bu iş kalemiyle ilgili notlar"></textarea>
+        <div class="actions" style="margin-top:10px"><button class="btn ghost" type="button" id="wpSave">Notu kaydet</button></div>
+      </div>
+      <div id="wpList"></div>
+    </div>
+  </section>
+</div>
+
+<nav class="tabs" aria-label="Bölümler">
+  <div class="tabs-in">
+    <button type="button" data-act="tab" data-tab="spend" aria-current="page">Harcama</button>
+    <button type="button" data-act="tab" data-tab="hk">Hakediş</button>
+    <button type="button" data-act="tab" data-tab="report">Rapor</button>
+    <button type="button" data-act="tab" data-tab="sites">Şantiyeler</button>
+  </div>
+</nav>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  'use strict';
+  var CATS = ['Malzeme', 'Usta / İşçilik', 'Elektrik', 'Nakliye', 'Yemek / Harcırah', 'Diğer'];
+  var UNITS = ['m²', 'mt', 'm³', 'adet', 'gün', 'kg', 'ton', 'kalem'];
+  var PAID = { kasa: 'Kasadan', cep: 'Cebimden', kart: 'Kredi kartı', musteri: 'Müşteri ödedi' };
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  var nf = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
+  function money(n) { n = Number(n) || 0; return (n < 0 ? '−' : '') + '₺' + nf.format(Math.abs(n)); }
+  function round2(x) { return Math.round((Number(x) || 0) * 100) / 100; }
+  function parseAmount(s) {
+    s = String(s || '').trim().replace(/[₺\s]/g, '');
+    if (!s) return NaN;
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+    var n = Number(s);
+    return isFinite(n) ? n : NaN;
+  }
+  function trn(n) { return String(n).replace('.', ','); }
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function fmtDay(s) {
+    var d = new Date(s + 'T12:00:00');
+    if (isNaN(d)) return s || 'Tarihsiz';
+    return d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  function fmtShort(s) {
+    var d = new Date(s + 'T12:00:00');
+    return isNaN(d) ? (s || '') : d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  var state = {
+    db: null, sites: [], entries: [], payments: [], hakedis: [], works: [],
+    siteView: null, workView: null, editWork: null, wpFor: null,
+    loaded: { sites: false, entries: false, payments: false, hakedis: false, works: false },
+    tab: 'spend', hkPane: 'hk', spendPane: 'form', docOk: null, sample: null, sampleLim: null, docBusy: false, filter: store.get('sd.filter') || 'all',
+    editEntry: null, editSite: null, editHk: null, confirm: null, saving: false, downloads: null
+  };
+
+  /* ---------- Hesaplar ---------- */
+  function sum(arr) { return arr.reduce(function (a, x) { return a + (Number(x.amount) || 0); }, 0); }
+  function vatIn(e) { var r = Number(e.vatRate) || 0; return r ? round2(e.amount * r / (100 + r)) : 0; }
+  function hkc(h) {
+    var base = Number(h.amount) || 0, rate = Number(h.vatRate) || 0;
+    var kdv = round2(base * rate / 100);
+    var ded = round2((h.deductions || []).reduce(function (a, k) { return a + (Number(k.amount) || 0); }, 0));
+    return { base: base, kdv: kdv, ded: ded, net: round2(base + kdv - ded) };
+  }
+  function siteById(id) { return state.sites.find(function (s) { return s.id === id; }); }
+  function siteName(id) { var s = siteById(id); return s ? s.name : 'Silinmiş şantiye'; }
+  function activeSites() { return state.sites.filter(function (s) { return !s.archived; }); }
+  function allLoaded() { var l = state.loaded; return l.sites && l.entries && l.payments && l.hakedis && l.works; }
+  function workById(id) { return state.works.find(function (w) { return w.id === id; }); }
+  function workName(id) { var w = workById(id); return w ? w.name : ''; }
+  function eFigs(es) {
+    var o = { giden: round2(sum(es)), kdv: round2(es.reduce(function (a, e) { return a + vatIn(e); }, 0)) };
+    ['cep', 'kart', 'musteri'].forEach(function (k) { o[k] = round2(sum(es.filter(function (e) { return e.paidBy === k; }))); });
+    o.kasa = round2(o.giden - o.cep - o.kart - o.musteri);
+    return o;
+  }
+  function pick(arr, f) { return f === 'all' ? arr : arr.filter(function (x) { return x.siteId === f; }); }
+  function figs(f) {
+    var es = pick(state.entries, f), ps = pick(state.payments, f), hs = pick(state.hakedis, f);
+    var o = { es: es, ps: ps, hs: hs };
+    function by(k) { return es.filter(function (e) { return e.paidBy === k; }); }
+    o.giden = round2(sum(es));
+    o.gidenKdv = round2(es.reduce(function (a, e) { return a + vatIn(e); }, 0));
+    o.gidenNet = round2(o.giden - o.gidenKdv);
+    var cards = by('kart');
+    o.kart = round2(sum(cards));
+    o.kartKdv = round2(cards.reduce(function (a, e) { return a + vatIn(e); }, 0));
+    o.cep = round2(sum(by('cep')));
+    o.musteri = round2(sum(by('musteri')));
+    o.musteriKdv = round2(by('musteri').reduce(function (a, e) { return a + vatIn(e); }, 0));
+    o.kasa = round2(o.giden - o.kart - o.cep - o.musteri);
+    o.base = 0; o.kdv = 0; o.ded = 0; o.net = 0; o.kes = {};
+    hs.forEach(function (h) {
+      var c = hkc(h); o.base += c.base; o.kdv += c.kdv; o.ded += c.ded; o.net += c.net;
+      (h.deductions || []).forEach(function (k) { var n = k.name || 'Kesinti'; o.kes[n] = (o.kes[n] || 0) + (Number(k.amount) || 0); });
+    });
+    o.base = round2(o.base); o.kdv = round2(o.kdv); o.ded = round2(o.ded); o.net = round2(o.net);
+    o.pesin = round2(sum(ps.filter(function (p) { return p.kind === 'pesin'; })));
+    o.nakit = round2(sum(ps) - o.pesin);
+    o.tahsil = round2(o.nakit + o.pesin + o.musteri);
+    o.alacak = round2(o.net - o.tahsil);
+    o.elde = round2(o.nakit + o.pesin - (o.giden - o.musteri));
+    o.kar = round2(o.base - o.gidenNet);
+    o.kdvFark = round2(o.kdv - o.gidenKdv);
+    return o;
+  }
+  function toast(t) {
+    var el = $('#toast'); el.textContent = t; el.hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(function () { el.hidden = true; }, 2300);
+  }
+  function fail(err) { toast('Kaydedilemedi' + (err && err.message ? ': ' + err.message : '')); }
+  function noteHtml(n) { return n ? '<div class="row-note">' + esc(n) + '</div>' : ''; }
+
+  /* ---------- Filtre ve şantiye seçimi ---------- */
+  function renderFilter() {
+    var sel = $('#siteFilter');
+    if (state.filter !== 'all' && !siteById(state.filter) && state.loaded.sites) state.filter = 'all';
+    var html = '<option value="all">Tüm şantiyeler</option>';
+    state.sites.forEach(function (s) {
+      html += '<option value="' + esc(s.id) + '">' + esc(s.name) + (s.archived ? ' (arşiv)' : '') + '</option>';
+    });
+    sel.innerHTML = html;
+    sel.value = state.filter;
+    if (sel.value !== state.filter) sel.value = 'all';
+  }
+  function renderSiteSelect() {
+    var sel = $('#fSite'), cur = sel.value, list = activeSites();
+    var editing = state.editEntry && state.entries.find(function (e) { return e.id === state.editEntry; });
+    if (editing && !list.some(function (s) { return s.id === editing.siteId; }) && siteById(editing.siteId)) list = list.concat([siteById(editing.siteId)]);
+    sel.innerHTML = list.map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
+    var ids = list.map(function (s) { return s.id; }), want = cur;
+    if (ids.indexOf(want) < 0) {
+      want = (state.filter !== 'all' && ids.indexOf(state.filter) >= 0) ? state.filter : store.get('sd.lastSite');
+      if (ids.indexOf(want) < 0) want = ids[0] || '';
+    }
+    sel.value = want;
+  }
+
+  /* ---------- Harcama ---------- */
+  function updateVatHint() {
+    var a = parseAmount($('#fAmount').value), r = Number($('#fVat').value) || 0, h = $('#vatHint');
+    if (!(a > 0)) { h.textContent = r ? 'Tutarı KDV dahil yaz; KDV otomatik ayrılır.' : ''; return; }
+    if (!r) { h.textContent = 'KDV yok sayılıyor.'; return; }
+    var k = round2(a * r / (100 + r));
+    h.textContent = 'İçindeki KDV ' + money(k) + ' · KDV hariç ' + money(a - k);
+  }
+  function updatePaidHint() {
+    var v = document.querySelector('input[name="paidBy"]:checked').value;
+    $('#paidHint').textContent = v === 'musteri' ? 'Müşteri ödedi: harcama yazılır, aynı tutar tahsil edilmiş sayılır ve hakedişten düşülür.' : '';
+  }
+  function renderSpend() {
+    var f = figs(state.filter), es = f.es;
+    $('#sumTotal').textContent = money(f.giden);
+    $('#sumPocket').textContent = money(f.cep);
+    $('#sumCard').textContent = money(f.kart);
+    $('#sumKasa').textContent = money(f.kasa);
+    $('#sumCust').textContent = money(f.musteri);
+    $('#sumVat').textContent = money(f.gidenKdv);
+
+    var none = allLoaded() && activeSites().length === 0 && !state.editEntry;
+    $('#noSites').hidden = !none;
+    $('#spendForm').hidden = none;
+
+    var box = $('#spendList');
+    if (!allLoaded()) { box.innerHTML = '<div class="empty">Kayıtlar yükleniyor…</div>'; return; }
+    if (!es.length) { box.innerHTML = '<div class="empty"><strong>Henüz harcama yok</strong>İlk harcamanı yukarıdaki formdan ekle.</div>'; return; }
+    var sorted = es.slice().sort(function (a, b) {
+      return (b.date || '').localeCompare(a.date || '') || (b.createdAt || 0) - (a.createdAt || 0);
+    });
+    var groups = [], cur = null;
+    sorted.forEach(function (e) {
+      if (!cur || cur.date !== e.date) { cur = { date: e.date, items: [] }; groups.push(cur); }
+      cur.items.push(e);
+    });
+    box.innerHTML = groups.map(function (g) {
+      var rows = g.items.map(function (e) {
+        var asking = state.confirm === 'entry:' + e.id, k = vatIn(e);
+        var act = asking
+          ? '<span class="ask">Silinsin mi?</span><button class="link danger" type="button" data-act="entry-del-yes" data-id="' + esc(e.id) + '">Evet, sil</button><button class="link" type="button" data-act="confirm-no">Vazgeç</button>'
+          : '<button class="link" type="button" data-act="entry-edit" data-id="' + esc(e.id) + '">Düzenle</button><button class="link danger" type="button" data-act="entry-del" data-id="' + esc(e.id) + '">Sil</button>';
+        return '<li class="row"><div class="row-title">' + esc(e.desc || e.category || 'Harcama') + '</div>' +
+          '<div class="row-amt num">' + money(e.amount) + '</div>' +
+          '<div class="row-meta"><span>' + esc(siteName(e.siteId)) + '</span><span>' + esc(e.category || '') + '</span>' +
+          (e.workId && workById(e.workId) ? '<span class="pill arch">' + esc(workName(e.workId)) + '</span>' : '') +
+          (e.paidBy === 'cep' ? '<span class="pill">Cebimden</span>' : '') +
+          (e.paidBy === 'kart' ? '<span class="pill cardp">Kredi kartı</span>' : '') +
+          (e.paidBy === 'musteri' ? '<span class="pill custp">Müşteri ödedi</span>' : '') +
+          (k ? '<span class="num">KDV ' + money(k) + ' (%' + (Number(e.vatRate) || 0) + ')</span>' : '') + '</div>' +
+          noteHtml(e.note) +
+          '<div class="row-act">' + act + '</div></li>';
+      }).join('');
+      return '<h3 class="day"><span>' + esc(fmtDay(g.date)) + '</span><span class="num">' + money(sum(g.items)) + '</span></h3><ul class="list">' + rows + '</ul>';
+    }).join('');
+  }
+  function resetSpendForm(keep) {
+    state.editEntry = null;
+    $('#fDesc').value = ''; $('#fAmount').value = ''; $('#fNote').value = '';
+    $('#spendFormTitle').textContent = 'Harcama ekle';
+    $('#spendBtn').textContent = 'Kaydet';
+    $('#spendCancel').hidden = true;
+    $('#spendMsg').textContent = '';
+    if (!keep) { document.querySelector('input[name="paidBy"][value="kasa"]').checked = true; $('#fVat').value = '0'; }
+    updateVatHint(); updatePaidHint();
+  }
+
+  /* ---------- Hakediş ---------- */
+  function hkMode() { return document.querySelector('input[name="hkMode"]:checked').value; }
+  function applyHkMode() {
+    var m = hkMode();
+    $('#hkGotur').hidden = m !== 'gotur';
+    $('#hkBirim').hidden = m !== 'birim';
+    if (m === 'birim' && !$('#kalemList').children.length) addKalemRow();
+  }
+  function addKesRow(name, amount) {
+    var d = document.createElement('div');
+    d.className = 'kes-row';
+    d.innerHTML = '<input type="text" list="kesNames" placeholder="Kesinti adı" aria-label="Kesinti adı">' +
+      '<input type="text" inputmode="decimal" placeholder="Tutar ₺" aria-label="Kesinti tutarı">' +
+      '<button class="link danger" type="button" data-act="kes-rm" aria-label="Kesintiyi kaldır">Kaldır</button>';
+    var ins = d.querySelectorAll('input');
+    ins[0].value = name || ''; ins[1].value = amount ? trn(amount) : '';
+    $('#kesList').appendChild(d);
+  }
+  function addKalemRow(it) {
+    var d = document.createElement('div');
+    d.className = 'kal-row';
+    d.innerHTML = '<input class="c-all" type="text" placeholder="İş kalemi (Örn. Seramik döşeme)" aria-label="İş kalemi">' +
+      '<input class="c-2" type="text" inputmode="decimal" placeholder="Miktar" aria-label="Miktar">' +
+      '<select class="c-2" aria-label="Birim">' + UNITS.map(function (u) { return '<option>' + esc(u) + '</option>'; }).join('') + '</select>' +
+      '<input class="c-2" type="text" inputmode="decimal" placeholder="Birim fiyat ₺" aria-label="Birim fiyat">' +
+      '<span class="c-4 tot num">= ₺0</span><button class="link danger rm" type="button" data-act="kal-rm" aria-label="Kalemi kaldır">Kaldır</button>';
+    var ins = d.querySelectorAll('input'), sel = d.querySelector('select');
+    if (it) { ins[0].value = it.name || ''; ins[1].value = it.qty ? trn(it.qty) : ''; sel.value = it.unit || UNITS[0]; ins[2].value = it.price ? trn(it.price) : ''; }
+    $('#kalemList').appendChild(d);
+    updKalemTot(d);
+  }
+  function updKalemTot(row) {
+    var ins = row.querySelectorAll('input'), q = parseAmount(ins[1].value), p = parseAmount(ins[2].value);
+    row.querySelector('.tot').textContent = '= ' + money(q > 0 && p > 0 ? round2(q * p) : 0);
+  }
+  function readKes() {
+    var out = [], bad = false;
+    document.querySelectorAll('#kesList .kes-row').forEach(function (r) {
+      var ins = r.querySelectorAll('input'), nm = ins[0].value.trim(), raw = ins[1].value.trim();
+      if (!nm && !raw) return;
+      var a = parseAmount(raw);
+      if (!(a > 0)) { bad = true; return; }
+      out.push({ name: nm || 'Kesinti', amount: a });
+    });
+    return { rows: out, bad: bad };
+  }
+  function readKalem() {
+    var out = [], bad = false;
+    document.querySelectorAll('#kalemList .kal-row').forEach(function (r) {
+      var ins = r.querySelectorAll('input'), nm = ins[0].value.trim(), qr = ins[1].value.trim(), pr = ins[2].value.trim();
+      if (!nm && !qr && !pr) return;
+      var q = parseAmount(qr), p = parseAmount(pr);
+      if (!(q > 0) || !(p > 0)) { bad = true; return; }
+      out.push({ name: nm || 'İş kalemi', qty: q, unit: r.querySelector('select').value, price: p });
+    });
+    return { rows: out, bad: bad };
+  }
+  function hkBase() {
+    if (hkMode() === 'birim') return round2(readKalem().rows.reduce(function (a, k) { return a + k.qty * k.price; }, 0));
+    var b = parseAmount($('#hAmount').value); return b > 0 ? b : 0;
+  }
+  function calcHk() {
+    var c = hkc({ amount: hkBase(), vatRate: $('#hVat').value, deductions: readKes().rows });
+    $('#hkCalc').innerHTML =
+      '<div class="st-row"><span>Hakediş tutarı (KDV hariç)</span><span class="num">' + money(c.base) + '</span></div>' +
+      '<div class="st-row"><span>+ KDV (%' + (Number($('#hVat').value) || 0) + ')</span><span class="num">' + money(c.kdv) + '</span></div>' +
+      '<div class="st-row"><span>− Kesintiler</span><span class="num">' + money(-c.ded) + '</span></div>' +
+      '<div class="st-row strong"><span>Net hakediş</span><span class="num">' + money(c.net) + '</span></div>';
+  }
+  function resetHkForm() {
+    state.editHk = null;
+    $('#hTitle').value = ''; $('#hAmount').value = ''; $('#hNote').value = ''; $('#kesList').innerHTML = ''; $('#kalemList').innerHTML = '';
+    $('#hVat').value = '20';
+    document.querySelector('input[name="hkMode"][value="gotur"]').checked = true;
+    $('#hkFormTitle').textContent = 'Hakediş ekle'; $('#hkBtn').textContent = 'Hakedişi kaydet';
+    $('#hkCancel').hidden = true; $('#hkMsg').textContent = ''; applyHkMode(); calcHk();
+  }
+  function renderHk() {
+    var gate = $('#hkGate'), main = $('#hkMain');
+    if (!allLoaded()) { gate.innerHTML = '<div class="empty">Kayıtlar yükleniyor…</div>'; main.hidden = true; return; }
+    if (!state.sites.length) {
+      gate.innerHTML = '<div class="empty"><strong>Şantiye yok</strong>Hakediş için önce bir şantiye ekle.<div><button class="btn" type="button" data-act="tab" data-tab="sites">Şantiye ekle</button></div></div>';
+      main.hidden = true; return;
+    }
+    if (state.filter === 'all') {
+      gate.innerHTML = '<div class="empty"><strong>Hangi şantiye?</strong>Hakediş ve tahsilat şantiye bazında girilir.<div class="chips">' +
+        activeSites().map(function (s) { return '<button class="btn ghost small" type="button" data-act="site-open" data-id="' + esc(s.id) + '">' + esc(s.name) + '</button>'; }).join('') + '</div></div>';
+      main.hidden = true; return;
+    }
+    gate.innerHTML = ''; main.hidden = false;
+    var s = siteById(state.filter), f = figs(state.filter);
+    $('#hkHead').innerHTML = '<h2>' + esc(s.name) + '</h2><p>' + esc(s.employer ? 'İşveren: ' + s.employer : 'İşveren girilmedi') + '</p>';
+    $('#togHk').setAttribute('aria-pressed', state.hkPane === 'hk');
+    $('#togPay').setAttribute('aria-pressed', state.hkPane === 'pay');
+    $('#paneHk').hidden = state.hkPane !== 'hk';
+    $('#panePay').hidden = state.hkPane !== 'pay';
+
+    var hs = f.hs.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || '') || (b.createdAt || 0) - (a.createdAt || 0); });
+    $('#hkList').innerHTML = !hs.length
+      ? '<div class="empty"><strong>Hakediş kaydı yok</strong>İşverene kestiğin hakedişi yukarıdan ekle.</div>'
+      : '<h3 class="section-title">Hakediş kayıtları</h3><ul class="list">' + hs.map(function (h) {
+        var c = hkc(h), asking = state.confirm === 'hk:' + h.id;
+        var act = asking
+          ? '<span class="ask">Silinsin mi?</span><button class="link danger" type="button" data-act="hk-del-yes" data-id="' + esc(h.id) + '">Evet, sil</button><button class="link" type="button" data-act="confirm-no">Vazgeç</button>'
+          : '<button class="link" type="button" data-act="hk-edit" data-id="' + esc(h.id) + '">Düzenle</button><button class="link danger" type="button" data-act="hk-del" data-id="' + esc(h.id) + '">Sil</button>';
+        var kes = (h.deductions || []).map(function (k) { return esc(k.name) + ' ' + money(k.amount); }).join(' · ');
+        var items = h.mode === 'birim' ? (h.items || []).map(function (i) { return esc(i.name) + ' ' + nf.format(i.qty) + ' ' + esc(i.unit) + ' × ' + money(i.price); }).join(' · ') : '';
+        return '<li class="row"><div class="row-title">' + esc(h.title || 'Hakediş') + '</div><div class="row-amt num">' + money(c.net) + '</div>' +
+          '<div class="row-meta"><span>' + esc(fmtShort(h.date)) + '</span><span>' + (h.mode === 'birim' ? 'Birim fiyat' : 'Götürü') + '</span><span class="num">KDV hariç ' + money(c.base) + '</span><span class="num">KDV ' + money(c.kdv) + '</span></div>' +
+          (items ? '<div class="row-sub">Kalemler: ' + items + '</div>' : '') +
+          (kes ? '<div class="row-sub">Kesinti: ' + kes + '</div>' : '') +
+          noteHtml(h.note) +
+          '<div class="row-act">' + act + '</div></li>';
+      }).join('') + '</ul>';
+
+    var ps = f.ps.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || '') || (b.createdAt || 0) - (a.createdAt || 0); });
+    $('#payList').innerHTML = !ps.length
+      ? '<div class="empty"><strong>Gelen para kaydı yok</strong>İşverenden aldığın parayı yukarıdan ekle.</div>'
+      : '<h3 class="section-title">Gelen para kayıtları</h3><ul class="list">' + ps.map(function (p) {
+        var asking = state.confirm === 'pay:' + p.id;
+        var act = asking
+          ? '<span class="ask">Silinsin mi?</span><button class="link danger" type="button" data-act="pay-del-yes" data-id="' + esc(p.id) + '">Evet, sil</button><button class="link" type="button" data-act="confirm-no">Vazgeç</button>'
+          : '<button class="link danger" type="button" data-act="pay-del" data-id="' + esc(p.id) + '">Sil</button>';
+        return '<li class="row"><div class="row-title">' + (p.kind === 'pesin' ? 'Peşin ödeme / avans' : 'Havale / nakit ödeme') + '</div><div class="row-amt num pos">' + money(p.amount) + '</div>' +
+          '<div class="row-meta"><span>' + esc(fmtShort(p.date)) + '</span>' + (p.kind === 'pesin' ? '<span class="pill">Peşin</span>' : '') + '</div>' + noteHtml(p.note) + '<div class="row-act">' + act + '</div></li>';
+      }).join('') + '</ul>';
+  }
+
+  /* ---------- Rapor ---------- */
+  function rows(list) {
+    return '<div>' + list.map(function (r) {
+      return '<div class="st-row' + (r.sub ? ' sub' : '') + (r.strong ? ' strong' : '') + '"><span>' + r.k + '</span><span class="num ' + (r.cls || '') + '">' + r.v + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function karText(f) { return f.hs.length ? money(f.kar) : '—'; }
+  function renderReport() {
+    var body = $('#reportBody'), exp = $('#exportBox');
+    if (!allLoaded()) { body.innerHTML = '<div class="empty">Kayıtlar yükleniyor…</div>'; exp.hidden = true; return; }
+    if (!state.sites.length) {
+      body.innerHTML = '<div class="empty"><strong>Şantiye yok</strong>Rapor için önce bir şantiye ekle.<div><button class="btn" type="button" data-act="tab" data-tab="sites">Şantiye ekle</button></div></div>';
+      exp.hidden = true; return;
+    }
+    exp.hidden = false;
+    if (state.filter === 'all') {
+      var t = figs('all');
+      var html = '<div class="scard total"><h3>Tüm şantiyeler</h3><div class="emp">Toplam</div>' + mini(t) + '</div>';
+      var shown = state.sites.filter(function (s) { return !s.archived || pick(state.entries, s.id).length || pick(state.hakedis, s.id).length; });
+      html += shown.map(function (s) {
+        var f = figs(s.id);
+        return '<div class="scard"><h3>' + esc(s.name) + '</h3><div class="emp">' + esc(s.employer || 'İşveren girilmedi') + '</div>' + mini(f) +
+          '<button class="btn ghost small" type="button" data-act="site-open" data-id="' + esc(s.id) + '">Detayı aç</button></div>';
+      }).join('');
+      body.innerHTML = html; return;
+    }
+    var s = siteById(state.filter), f = figs(state.filter), contract = Number(s.contract) || 0;
+    var h = '<div class="site-head"><h2>' + esc(s.name) + '</h2><p>' + esc(s.employer ? 'İşveren: ' + s.employer : 'İşveren girilmedi') + '</p></div>';
+    h += '<div class="figs">' +
+      '<div class="fig"><div class="k">NET HAKEDİŞ</div><div class="v num">' + money(f.net) + '</div></div>' +
+      '<div class="fig"><div class="k">TAHSİL EDİLEN</div><div class="v num pos">' + money(f.tahsil) + '</div></div>' +
+      '<div class="fig"><div class="k">HARCAMA (KDV DAHİL)</div><div class="v num">' + money(f.giden) + '</div></div>' +
+      '<div class="fig"><div class="k">KÂR (KDV HARİÇ)</div><div class="v num ' + (f.hs.length ? (f.kar < 0 ? 'neg' : 'pos') : '') + '">' + karText(f) + '</div></div></div>';
+
+    var hk = [{ k: 'Hakediş tutarı (KDV hariç)', v: money(f.base) }, { k: '+ KDV', v: money(f.kdv) }, { k: '− Kesintiler', v: money(-f.ded) }];
+    Object.keys(f.kes).forEach(function (n) { hk.push({ k: esc(n), v: money(-f.kes[n]), sub: true }); });
+    hk.push({ k: 'Net hakediş', v: money(f.net), strong: true });
+    hk.push({ k: '− Tahsil edilen ve mahsup edilen', v: money(-f.tahsil) });
+    if (f.nakit) hk.push({ k: 'Havale / nakit ödemeler', v: money(f.nakit), sub: true });
+    if (f.pesin) hk.push({ k: 'Peşin ödemeler / avans', v: money(f.pesin), sub: true });
+    if (f.musteri) hk.push({ k: 'Müşterinin kendi ödediği harcamalar', v: money(f.musteri), sub: true });
+    hk.push({ k: 'Kalan alacak', v: money(f.alacak), strong: true, cls: f.alacak > 0 ? 'neg' : 'pos' });
+    h += '<div class="panel"><h2>Hakediş hesabı</h2>' + rows(hk) + '</div>';
+
+    var gd = [
+      { k: 'Toplam harcama (KDV dahil)', v: money(f.giden), strong: true },
+      { k: 'KDV hariç tutar', v: money(f.gidenNet), sub: true },
+      { k: 'İçindeki KDV (indirilecek)', v: money(f.gidenKdv), sub: true },
+      { k: 'Kredi kartı işlemleri', v: money(f.kart) },
+      { k: 'Kart işlemlerinin KDV\'si', v: money(f.kartKdv), sub: true },
+      { k: 'Müşteri ödedi', v: money(f.musteri) },
+      { k: 'Müşteri ödemelerinin KDV\'si', v: money(f.musteriKdv), sub: true },
+      { k: 'Cebimden harcanan', v: money(f.cep) },
+      { k: 'Kasadan harcanan', v: money(f.kasa) },
+      { k: 'Elde kalan nakit (alınan para − bizim ödediğimiz)', v: money(f.elde), cls: f.elde < 0 ? 'neg' : 'pos' }
+    ];
+    h += '<div class="panel"><h2>Harcama ve KDV</h2>' + rows(gd) + '</div>';
+
+    var sws = state.works.filter(function (w) { return w.siteId === s.id; });
+    if (sws.length) {
+      var wr = sws.map(function (w) { return { k: esc(w.name), v: money(round2(sum(f.es.filter(function (e) { return e.workId === w.id; })))) }; });
+      var gen = round2(sum(f.es.filter(function (e) { return !e.workId || !workById(e.workId); })));
+      if (gen) wr.push({ k: 'Genel (iş kalemi yok)', v: money(gen) });
+      h += '<div class="panel"><h2>İş kalemlerine göre harcama</h2>' + rows(wr) + '</div>';
+    }
+
+    var kr = [
+      { k: 'Hakediş (KDV hariç)', v: money(f.base) },
+      { k: '− Harcama (KDV hariç)', v: money(-f.gidenNet) },
+      { k: 'Kâr', v: f.hs.length ? money(f.kar) : '—', strong: true, cls: f.hs.length ? (f.kar < 0 ? 'neg' : 'pos') : '' },
+      { k: 'KDV farkı (hesaplanan − indirilecek)', v: money(f.kdvFark), sub: true }
+    ];
+    if (contract) kr.push({ k: 'Sözleşmeye göre tahmini kâr', v: money(contract - f.gidenNet), sub: true });
+    h += '<div class="panel"><h2>Kâr hesabı</h2>' + rows(kr) +
+      (f.hs.length ? '' : '<p class="hint" style="margin-top:8px">Hakediş girilince kâr hesaplanır.</p>') + '</div>';
+
+    if (contract) {
+      var pct = Math.min(100, Math.round(f.base / contract * 100));
+      h += '<div class="panel progress"><div class="line"><span>Sözleşme bedeli (KDV hariç) <b class="num">' + money(contract) + '</b></span><span>Hakediş yapılan %' + pct + '</span></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+    }
+    var by = {};
+    f.es.forEach(function (e) { var k = e.category || 'Diğer'; by[k] = (by[k] || 0) + (Number(e.amount) || 0); });
+    var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; });
+    if (keys.length) {
+      h += '<div class="panel"><h2>Nereye harcandı?</h2><div class="cats">' + keys.map(function (k) {
+        var p = f.giden ? Math.round(by[k] / f.giden * 100) : 0;
+        return '<div class="cat"><div class="line"><span>' + esc(k) + '</span><span class="num">' + money(by[k]) + ' · %' + p + '</span></div><div class="bar"><i style="width:' + p + '%"></i></div></div>';
+      }).join('') + '</div></div>';
+    }
+    body.innerHTML = h;
+  }
+  function mini(f) {
+    return '<div class="mini">' +
+      '<div><div class="k">NET HAKEDİŞ</div><div class="v num">' + money(f.net) + '</div></div>' +
+      '<div><div class="k">TAHSİL EDİLEN</div><div class="v num pos">' + money(f.tahsil) + '</div></div>' +
+      '<div><div class="k">HARCAMA</div><div class="v num">' + money(f.giden) + '</div></div>' +
+      '<div><div class="k">KÂR (KDV HARİÇ)</div><div class="v num ' + (f.hs.length ? (f.kar < 0 ? 'neg' : 'pos') : '') + '">' + karText(f) + '</div></div></div>';
+  }
+
+  /* ---------- Şantiyeler ---------- */
+  function renderSitesHome() {
+    var box = $('#siteList');
+    if (!allLoaded()) { box.innerHTML = '<div class="empty">Kayıtlar yükleniyor…</div>'; return; }
+    if (!state.sites.length) { box.innerHTML = '<div class="empty"><strong>Henüz şantiye yok</strong>Yukarıdan ilk şantiyeni ekle.</div>'; return; }
+    var sorted = state.sites.slice().sort(function (a, b) { return (a.archived ? 1 : 0) - (b.archived ? 1 : 0) || (a.createdAt || 0) - (b.createdAt || 0); });
+    box.innerHTML = '<ul class="list">' + sorted.map(function (s) {
+      var ne = pick(state.entries, s.id).length, nh = pick(state.hakedis, s.id).length, np = pick(state.payments, s.id).length;
+      var sw = state.works.filter(function (w) { return w.siteId === s.id; }), nw = sw.length, empty = !ne && !nh && !np && !nw;
+      var asking = state.confirm === 'site:' + s.id;
+      var act = asking
+        ? '<span class="ask">Şantiye silinsin mi?</span><button class="link danger" type="button" data-act="site-del-yes" data-id="' + esc(s.id) + '">Evet, sil</button><button class="link" type="button" data-act="confirm-no">Vazgeç</button>'
+        : '<button class="link" type="button" data-act="site-page" data-id="' + esc(s.id) + '">İş kalemleri</button>' +
+          '<button class="link" type="button" data-act="site-edit" data-id="' + esc(s.id) + '">Düzenle</button>' +
+          '<button class="link" type="button" data-act="site-arch" data-id="' + esc(s.id) + '">' + (s.archived ? 'Tekrar aç' : 'Arşivle') + '</button>' +
+          (empty ? '<button class="link danger" type="button" data-act="site-del" data-id="' + esc(s.id) + '">Sil</button>' : '');
+      return '<li class="row"><div class="row-title">' + esc(s.name) + '</div>' +
+        '<div class="row-amt num">' + (Number(s.contract) ? money(s.contract) : '') + '</div>' +
+        '<div class="row-meta"><span>' + esc(s.employer || 'İşveren girilmedi') + '</span><span>' + ne + ' harcama · ' + nh + ' hakediş · ' + np + ' tahsilat' + (nw ? ' · ' + nw + ' iş kalemi' : '') + '</span>' + (s.archived ? '<span class="pill arch">Arşiv</span>' : '') + '</div>' +
+        (nw ? '<div class="row-sub">İş kalemleri: ' + sw.map(function (w) { return esc(w.name); }).join(' · ') + '</div>' : '') +
+        '<div class="row-act">' + act + '</div></li>';
+    }).join('') + '</ul>';
+  }
+  function resetSiteForm() {
+    state.editSite = null;
+    $('#sName').value = ''; $('#sEmp').value = ''; $('#sContract').value = '';
+    $('#siteFormTitle').textContent = 'Şantiye ekle'; $('#siteBtn').textContent = 'Şantiye ekle';
+    $('#siteCancel').hidden = true; $('#siteMsg').textContent = '';
+  }
+
+  /* ---------- İş kalemleri ---------- */
+  function renderWorkSelect() {
+    var sel = $('#fWork'), cur = sel.value, sid = $('#fSite').value;
+    var list = state.works.filter(function (w) { return w.siteId === sid; });
+    sel.innerHTML = '<option value="">Genel (iş kalemi yok)</option>' + list.map(function (w) { return '<option value="' + esc(w.id) + '">' + esc(w.name) + '</option>'; }).join('');
+    sel.value = list.some(function (w) { return w.id === cur; }) ? cur : '';
+  }
+  function resetWorkForm() {
+    state.editWork = null; $('#wName').value = '';
+    $('#workFormTitle').textContent = 'İş kalemi ekle'; $('#workBtn').textContent = 'İş kalemi ekle';
+    $('#workCancel').hidden = true; $('#workMsg').textContent = '';
+  }
+  function entryListHtml(es) {
+    var sorted = es.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || '') || (b.createdAt || 0) - (a.createdAt || 0); });
+    var groups = [], cur = null;
+    sorted.forEach(function (e) {
+      if (!cur || cur.date !== e.date) { cur = { date: e.date, items: [] }; groups.push(cur); }
+      cur.items.push(e);
+    });
+    return groups.map(function (g) {
+      var rows = g.items.map(function (e) {
+        var asking = state.confirm === 'entry:' + e.id, k = vatIn(e);
+        var act = asking
+          ? '<span class="ask">Silinsin mi?</span><button class="link danger" type="button" data-act="entry-del-yes" data-id="' + esc(e.id) + '">Evet, sil</button><button class="link" type="button" data-act="confirm-no">Vazgeç</button>'
+          : '<button class="link" type="button" data-act="entry-edit" data-id="' + esc(e.id) + '">Düzenle</button><button class="link danger" type="button" data-act="entry-del" data-id="' + esc(e.id) + '">Sil</button>';
+        return '<li class="row"><div class="row-title">' + esc(e.desc || e.category || 'Harcama') + '</div>' +
+          '<div class="row-amt num">' + money(e.amount) + '</div>' +
+          '<div class="row-meta"><span>' + esc(e.category || '') + '</span>' +
+          (e.paidBy === 'cep' ? '<span class="pill">Cebimden</span>' : '') +
+          (e.paidBy === 'kart' ? '<span class="pill cardp">Kredi kartı</span>' : '') +
+          (e.paidBy === 'musteri' ? '<span class="pill custp">Müşteri ödedi</span>' : '') +
+          (k ? '<span class="num">KDV ' + money(k) + ' (%' + (Number(e.vatRate) || 0) + ')</span>' : '') + '</div>' +
+          noteHtml(e.note) + '<div class="row-act">' + act + '</div></li>';
+      }).join('');
+      return '<h3 class="day"><span>' + esc(fmtDay(g.date)) + '</span><span class="num">' + money(sum(g.items)) + '</span></h3><ul class="list">' + rows + '</ul>';
+    }).join('');
+  }
+  function renderSites() {
+    if (allLoaded()) {
+      if (state.workView && !workById(state.workView)) state.workView = null;
+      if (state.siteView && !siteById(state.siteView)) { state.siteView = null; state.workView = null; }
+    }
+    $('#sitesHome').hidden = !!state.siteView;
+    $('#sitePage').hidden = !state.siteView || !!state.workView;
+    $('#workPage').hidden = !state.workView;
+    renderSitesHome();
+    if (state.siteView && !state.workView) renderSitePage();
+    if (state.workView) renderWorkPage();
+  }
+  function renderSitePage() {
+    var s = siteById(state.siteView); if (!s) return;
+    $('#spTitle').textContent = s.name; $('#spSub').textContent = s.employer ? 'İşveren: ' + s.employer : '';
+    var es = pick(state.entries, s.id), ws = state.works.filter(function (w) { return w.siteId === s.id; });
+    var tot = round2(sum(es)), linked = round2(sum(es.filter(function (e) { return e.workId && workById(e.workId); })));
+    $('#spSummary').innerHTML = '<div class="summary"><div><div class="k">Toplam harcama</div><div class="v num">' + money(tot) + '</div></div>' +
+      '<div><div class="k">İş kalemlerine bağlı</div><div class="v num">' + money(linked) + '</div></div>' +
+      '<div><div class="k">Genel</div><div class="v num">' + money(round2(tot - linked)) + '</div></div></div>';
+    var box = $('#workList');
+    if (!ws.length) { box.innerHTML = '<div class="empty"><strong>Henüz iş kalemi yok</strong>Yukarıdan ilk iş kalemini ekle. Her iş kaleminin kendi sayfası olur.</div>'; return; }
+    ws = ws.slice().sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+    box.innerHTML = '<h3 class="section-title">İş kalemleri</h3><ul class="list">' + ws.map(function (w) {
+      var wes = es.filter(function (e) { return e.workId === w.id; }), asking = state.confirm === 'work:' + w.id;
+      var act = asking
+        ? '<span class="ask">İş kalemi silinsin mi?</span><button class="link danger" type="button" data-act="work-del-yes" data-id="' + esc(w.id) + '">Evet, sil</button><button class="link" type="button" data-act="confirm-no">Vazgeç</button>'
+        : '<button class="link" type="button" data-act="work-page" data-id="' + esc(w.id) + '">Sayfayı aç</button>' +
+          '<button class="link" type="button" data-act="work-edit" data-id="' + esc(w.id) + '">Adı düzenle</button>' +
+          (wes.length ? '' : '<button class="link danger" type="button" data-act="work-del" data-id="' + esc(w.id) + '">Sil</button>');
+      var nt = (w.note || '').trim();
+      return '<li class="row"><div class="row-title">' + esc(w.name) + '</div><div class="row-amt num">' + money(sum(wes)) + '</div>' +
+        '<div class="row-meta"><span>' + wes.length + ' harcama</span>' + (nt ? '<span>Not var</span>' : '') + '</div>' +
+        '<div class="row-act">' + act + '</div></li>';
+    }).join('') + '</ul>';
+  }
+  function renderWorkPage() {
+    var w = workById(state.workView); if (!w) return;
+    var s = siteById(w.siteId), es = state.entries.filter(function (e) { return e.workId === w.id; });
+    $('#wpCrumb').textContent = (s ? s.name : 'Şantiye') + ' · İş kalemi';
+    $('#wpTitle').textContent = w.name;
+    var back = $('#wpBack'); back.setAttribute('data-id', w.siteId); back.textContent = '← ' + (s ? s.name : 'Şantiye');
+    if (state.wpFor !== w.id) { $('#wpNote').value = w.note || ''; state.wpFor = w.id; }
+    var f = eFigs(es);
+    $('#wpSummary').innerHTML = '<div class="summary"><div><div class="k">Toplam harcama</div><div class="v num">' + money(f.giden) + '</div></div>' +
+      '<div><div class="k">Cebimden</div><div class="v num pocket">' + money(f.cep) + '</div></div>' +
+      '<div><div class="k">Kredi kartı</div><div class="v num cardc">' + money(f.kart) + '</div></div>' +
+      '<div class="extra"><span>Kasadan <b class="num">' + money(f.kasa) + '</b></span><span>Müşteri ödedi <b class="num">' + money(f.musteri) + '</b></span><span>İçindeki KDV <b class="num">' + money(f.kdv) + '</b></span></div></div>';
+    $('#wpList').innerHTML = es.length ? '<h3 class="section-title" style="margin-top:4px">Bu işin harcamaları</h3>' + entryListHtml(es)
+      : '<div class="empty"><strong>Bu işe harcama yok</strong>"Bu işe harcama ekle" ile ilk kaydı gir.</div>';
+  }
+
+  /* ---------- Genel çizim ---------- */
+  var pending = false;
+  function render() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(function () {
+      pending = false;
+      renderFilter(); renderSiteSelect(); renderWorkSelect();
+      renderSpend(); renderHk(); renderReport(); renderSites(); renderBackup();
+      ['spend', 'hk', 'report', 'sites'].forEach(function (t) { $('#view-' + t).hidden = state.tab !== t; });
+      document.querySelectorAll('.tabs button').forEach(function (b) {
+        if (b.getAttribute('data-tab') === state.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+      });
+    });
+  }
+  function setTab(t) { state.tab = t; state.confirm = null; render(); window.scrollTo(0, 0); }
+  function banner(t) { var b = $('#banner'); b.textContent = t; b.hidden = !t; }
+
+  /* ---------- Olaylar ---------- */
+  $('#siteFilter').addEventListener('change', function (e) {
+    state.filter = e.target.value; store.set('sd.filter', state.filter); state.confirm = null;
+    if (state.editHk) resetHkForm();
+    if (state.filter !== 'all') { var o = $('#fSite'); if (Array.prototype.some.call(o.options, function (x) { return x.value === state.filter; })) o.value = state.filter; }
+    render();
+  });
+  $('#fSite').addEventListener('change', function (e) { store.set('sd.lastSite', e.target.value); renderWorkSelect(); });
+  $('#fAmount').addEventListener('input', updateVatHint);
+  $('#fVat').addEventListener('change', updateVatHint);
+  $('#spendForm').addEventListener('change', function (e) { if (e.target.name === 'paidBy') updatePaidHint(); });
+  $('#hAmount').addEventListener('input', calcHk);
+  $('#hVat').addEventListener('change', calcHk);
+  $('#kesList').addEventListener('input', calcHk);
+  $('#kalemList').addEventListener('input', function (e) { var r = e.target.closest('.kal-row'); if (r) updKalemTot(r); calcHk(); });
+  $('#kalemList').addEventListener('change', calcHk);
+  $('#hkForm').addEventListener('change', function (e) { if (e.target.name === 'hkMode') { applyHkMode(); calcHk(); } });
+  $('#kesAdd').addEventListener('click', function () { addKesRow(); var r = $('#kesList').lastChild; if (r) r.querySelector('input').focus(); });
+  $('#kalemAdd').addEventListener('click', function () { addKalemRow(); var r = $('#kalemList').lastChild; if (r) r.querySelector('input').focus(); });
+
+  function byId(arr, id) { return arr.find(function (x) { return x.id === id; }); }
+
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-act]');
+    if (!b) return;
+    var act = b.getAttribute('data-act'), id = b.getAttribute('data-id'), db = state.db;
+    if (act === 'tab') {
+      var tt = b.getAttribute('data-tab');
+      if (tt === 'sites' && state.tab === 'sites') { state.siteView = null; state.workView = null; resetWorkForm(); }
+      return setTab(tt);
+    }
+    if (act === 'sites-home') { state.siteView = null; state.workView = null; state.confirm = null; resetWorkForm(); render(); window.scrollTo(0, 0); return; }
+    if (act === 'site-page') { state.siteView = id; state.workView = null; state.tab = 'sites'; state.confirm = null; resetWorkForm(); render(); window.scrollTo(0, 0); return; }
+    if (act === 'work-page') {
+      var w0 = byId(state.works, id); if (!w0) return;
+      state.siteView = w0.siteId; state.workView = id; state.wpFor = null; state.confirm = null; render(); window.scrollTo(0, 0); return;
+    }
+    if (act === 'work-edit') {
+      var w2 = byId(state.works, id); if (!w2) return;
+      state.editWork = id; $('#wName').value = w2.name || '';
+      $('#workFormTitle').textContent = 'İş kalemi adını düzenle'; $('#workBtn').textContent = 'Güncelle'; $('#workCancel').hidden = false;
+      $('#workForm').scrollIntoView({ block: 'start' }); $('#wName').focus();
+      return;
+    }
+    if (act === 'work-del') { state.confirm = 'work:' + id; return render(); }
+    if (act === 'work-add-expense') {
+      var w1 = byId(state.works, state.workView); if (!w1) return;
+      state.filter = w1.siteId; store.set('sd.filter', w1.siteId); store.set('sd.lastSite', w1.siteId);
+      state.tab = 'spend'; state.spendPane = 'form'; state.confirm = null;
+      if (state.editEntry) resetSpendForm();
+      renderSiteSelect(); $('#fSite').value = w1.siteId; renderWorkSelect(); $('#fWork').value = w1.id;
+      render(); window.scrollTo(0, 0);
+      return;
+    }
+    if (act === 'hk-pane') { state.hkPane = b.getAttribute('data-pane'); return render(); }
+    if (act === 'kes-rm') { var row = b.closest('.kes-row'); if (row) row.remove(); return calcHk(); }
+    if (act === 'kal-rm') { var kr = b.closest('.kal-row'); if (kr) kr.remove(); return calcHk(); }
+    if (act === 'confirm-no') { state.confirm = null; return render(); }
+    if (act === 'site-open') { state.filter = id; store.set('sd.filter', id); return render(); }
+    if (act === 'entry-del') { state.confirm = 'entry:' + id; return render(); }
+    if (act === 'pay-del') { state.confirm = 'pay:' + id; return render(); }
+    if (act === 'hk-del') { state.confirm = 'hk:' + id; return render(); }
+    if (act === 'site-del') { state.confirm = 'site:' + id; return render(); }
+    if (act === 'entry-edit') {
+      var e = byId(state.entries, id); if (!e) return;
+      state.editEntry = id; state.tab = 'spend'; state.spendPane = 'form'; renderSiteSelect();
+      $('#fDate').value = e.date || todayStr(); $('#fCat').value = e.category || CATS[0];
+      $('#fSite').value = e.siteId; renderWorkSelect(); $('#fWork').value = e.workId || ''; $('#fDesc').value = e.desc || ''; $('#fAmount').value = trn(e.amount);
+      $('#fVat').value = String(Number(e.vatRate) || 0); $('#fNote').value = e.note || '';
+      document.querySelector('input[name="paidBy"][value="' + (PAID[e.paidBy] ? e.paidBy : 'kasa') + '"]').checked = true;
+      $('#spendFormTitle').textContent = 'Harcamayı düzenle'; $('#spendBtn').textContent = 'Güncelle'; $('#spendCancel').hidden = false;
+      updateVatHint(); updatePaidHint(); render(); setTimeout(function () { $('#spendForm').scrollIntoView({ block: 'start' }); }, 80);
+      return;
+    }
+    if (act === 'hk-edit') {
+      var h = byId(state.hakedis, id); if (!h) return;
+      state.editHk = id;
+      $('#hDate').value = h.date || todayStr(); $('#hTitle').value = h.title || '';
+      $('#hVat').value = String(Number(h.vatRate) || 0); $('#hNote').value = h.note || '';
+      var m = h.mode === 'birim' ? 'birim' : 'gotur';
+      document.querySelector('input[name="hkMode"][value="' + m + '"]').checked = true;
+      $('#kalemList').innerHTML = ''; $('#hAmount').value = '';
+      if (m === 'birim') (h.items || []).forEach(function (it) { addKalemRow(it); }); else $('#hAmount').value = trn(h.amount);
+      $('#kesList').innerHTML = ''; (h.deductions || []).forEach(function (k) { addKesRow(k.name, k.amount); });
+      $('#hkFormTitle').textContent = 'Hakedişi düzenle'; $('#hkBtn').textContent = 'Güncelle'; $('#hkCancel').hidden = false;
+      applyHkMode(); calcHk(); $('#hkForm').scrollIntoView({ block: 'start' });
+      return;
+    }
+    if (act === 'site-edit') {
+      var s = byId(state.sites, id); if (!s) return;
+      state.editSite = id; $('#sName').value = s.name || ''; $('#sEmp').value = s.employer || '';
+      $('#sContract').value = s.contract ? trn(s.contract) : '';
+      $('#siteFormTitle').textContent = 'Şantiyeyi düzenle'; $('#siteBtn').textContent = 'Güncelle'; $('#siteCancel').hidden = false;
+      $('#siteForm').scrollIntoView({ block: 'start' });
+      return;
+    }
+    if (act === 'export') return exportCsv();
+    if (!db) return;
+    var coll = { 'entry-del-yes': 'entries', 'pay-del-yes': 'payments', 'hk-del-yes': 'hakedis', 'site-del-yes': 'sites', 'work-del-yes': 'works' }[act];
+    if (coll) {
+      state.confirm = null;
+      db.doc(coll + '/' + id).delete().then(function () { toast('Silindi'); }, fail); render(); return;
+    }
+    if (act === 'site-arch') {
+      var st = byId(state.sites, id); if (!st) return;
+      db.doc('sites/' + id).update({ archived: !st.archived }).then(function () { toast(st.archived ? 'Şantiye tekrar açıldı' : 'Şantiye arşivlendi'); }, fail);
+    }
+  });
+
+  $('#spendCancel').addEventListener('click', function () { resetSpendForm(); render(); });
+  $('#hkCancel').addEventListener('click', resetHkForm);
+  $('#siteCancel').addEventListener('click', resetSiteForm);
+
+  function save(promise, msgEl, btn, done, okText) {
+    state.saving = true; btn.disabled = true;
+    promise.then(function () { toast(okText); done(); },
+      function (err) { msgEl.textContent = 'Kaydedilemedi. ' + (err && err.message ? err.message : ''); })
+      .then(function () { state.saving = false; btn.disabled = false; render(); });
+  }
+
+  $('#spendForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var msg = $('#spendMsg'); msg.textContent = '';
+    if (!state.db) { msg.textContent = 'Kayıt şu an yapılamıyor.'; return; }
+    if (state.saving) return;
+    var amount = parseAmount($('#fAmount').value), siteId = $('#fSite').value;
+    if (!siteId) { msg.textContent = 'Önce bir şantiye seç.'; return; }
+    if (!(amount > 0)) { msg.textContent = 'Tutarı rakamla yaz. Örn. 1250 veya 1.250,50'; return; }
+    var data = {
+      siteId: siteId, date: $('#fDate').value || todayStr(), category: $('#fCat').value,
+      desc: $('#fDesc').value.trim(), amount: amount, vatRate: Number($('#fVat').value) || 0,
+      paidBy: document.querySelector('input[name="paidBy"]:checked').value, note: $('#fNote').value.trim(), workId: $('#fWork').value || '', updatedAt: Date.now()
+    };
+    store.set('sd.lastSite', siteId);
+    var editing = state.editEntry, p;
+    if (editing) p = state.db.doc('entries/' + editing).update(data);
+    else { data.createdAt = Date.now(); p = state.db.collection('entries').add(data); }
+    save(p, msg, $('#spendBtn'), function () { resetSpendForm(true); $('#fDesc').focus(); }, editing ? 'Güncellendi' : 'Kaydedildi');
+  });
+
+  $('#hkForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var msg = $('#hkMsg'); msg.textContent = '';
+    if (!state.db || state.filter === 'all') return;
+    if (state.saving) return;
+    var mode = hkMode(), items = [];
+    if (mode === 'birim') {
+      var kl = readKalem();
+      if (kl.bad) { msg.textContent = 'Kalemlerde miktar ve birim fiyatı rakamla yaz veya boş satırı kaldır.'; return; }
+      if (!kl.rows.length) { msg.textContent = 'En az bir iş kalemi ekle.'; return; }
+      items = kl.rows;
+    }
+    var base = hkBase();
+    if (!(base > 0)) { msg.textContent = 'Hakediş tutarını (KDV hariç) rakamla yaz.'; return; }
+    var k = readKes();
+    if (k.bad) { msg.textContent = 'Kesinti tutarlarını rakamla yaz veya boş satırı kaldır.'; return; }
+    var data = {
+      siteId: state.filter, date: $('#hDate').value || todayStr(), title: $('#hTitle').value.trim(),
+      mode: mode, amount: base, items: items, vatRate: Number($('#hVat').value) || 0, deductions: k.rows,
+      note: $('#hNote').value.trim(), updatedAt: Date.now()
+    };
+    var editing = state.editHk, p;
+    if (editing) p = state.db.doc('hakedis/' + editing).update(data);
+    else { data.createdAt = Date.now(); p = state.db.collection('hakedis').add(data); }
+    save(p, msg, $('#hkBtn'), resetHkForm, editing ? 'Hakediş güncellendi' : 'Hakediş kaydedildi');
+  });
+
+  $('#payForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var msg = $('#payMsg'); msg.textContent = '';
+    if (!state.db || state.filter === 'all') return;
+    if (state.saving) return;
+    var amount = parseAmount($('#pAmount').value);
+    if (!(amount > 0)) { msg.textContent = 'Tutarı rakamla yaz. Örn. 50000'; return; }
+    var p = state.db.collection('payments').add({
+      siteId: state.filter, date: $('#pDate').value || todayStr(), amount: amount, kind: $('#pKind').value,
+      note: $('#pNote').value.trim(), createdAt: Date.now()
+    });
+    save(p, msg, $('#payBtn'), function () { $('#pAmount').value = ''; $('#pNote').value = ''; }, 'Kaydedildi');
+  });
+
+  $('#siteForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var msg = $('#siteMsg'); msg.textContent = '';
+    if (!state.db) { msg.textContent = 'Kayıt şu an yapılamıyor.'; return; }
+    if (state.saving) return;
+    var name = $('#sName').value.trim();
+    if (!name) { msg.textContent = 'Şantiye adını yaz.'; return; }
+    var cRaw = $('#sContract').value.trim(), contract = 0;
+    if (cRaw) { contract = parseAmount(cRaw); if (!(contract >= 0)) { msg.textContent = 'Sözleşme bedelini rakamla yaz.'; return; } }
+    var data = { name: name, employer: $('#sEmp').value.trim(), contract: contract };
+    var editing = state.editSite, p;
+    if (editing) p = state.db.doc('sites/' + editing).update(data);
+    else { data.createdAt = Date.now(); data.archived = false; p = state.db.collection('sites').add(data); }
+    save(p, msg, $('#siteBtn'), resetSiteForm, editing ? 'Güncellendi' : 'Şantiye eklendi');
+  });
+
+  $('#workCancel').addEventListener('click', resetWorkForm);
+  $('#workForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var msg = $('#workMsg'); msg.textContent = '';
+    if (!state.db || !state.siteView) return;
+    if (state.saving) return;
+    var name = $('#wName').value.trim();
+    if (!name) { msg.textContent = 'İş kalemi adını yaz.'; return; }
+    var editing = state.editWork, p;
+    if (editing) p = state.db.doc('works/' + editing).update({ name: name });
+    else p = state.db.collection('works').add({ siteId: state.siteView, name: name, note: '', createdAt: Date.now() });
+    save(p, msg, $('#workBtn'), resetWorkForm, editing ? 'Güncellendi' : 'İş kalemi eklendi');
+  });
+  $('#wpSave').addEventListener('click', function () {
+    if (!state.db || !state.workView) return;
+    var btn = $('#wpSave'); btn.disabled = true;
+    state.db.doc('works/' + state.workView).update({ note: $('#wpNote').value }).then(function () { toast('Not kaydedildi'); }, fail).then(function () { btn.disabled = false; });
+  });
+
+  /* ---------- CSV (Excel) ---------- */
+  function csvCell(v) { v = String(v == null ? '' : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  function exportCsv() {
+    var head = ['Tarih', 'Şantiye', 'Tür', 'Açıklama', 'Kategori / Kesinti', 'Ödeme', 'KDV oranı', 'KDV hariç', 'KDV', 'Kesinti', 'Toplam', 'Not', 'İş kalemi'];
+    var items = [];
+    pick(state.entries, state.filter).forEach(function (e) {
+      var k = vatIn(e);
+      items.push([e.date || '', siteName(e.siteId), 'Harcama', e.desc || '', e.category || '', PAID[e.paidBy] || 'Kasadan', Number(e.vatRate) ? '%' + e.vatRate : '', trn(round2(e.amount - k)), trn(k), '', trn(e.amount), e.note || '', workName(e.workId)]);
+    });
+    pick(state.hakedis, state.filter).forEach(function (h) {
+      var c = hkc(h);
+      items.push([h.date || '', siteName(h.siteId), 'Hakediş', h.title || '', (h.deductions || []).map(function (k) { return k.name + ' ' + trn(k.amount); }).join(' + '), h.mode === 'birim' ? 'Birim fiyat' : 'Götürü', Number(h.vatRate) ? '%' + h.vatRate : '', trn(c.base), trn(c.kdv), trn(c.ded), trn(c.net), h.note || '', '']);
+    });
+    pick(state.payments, state.filter).forEach(function (p) {
+      items.push([p.date || '', siteName(p.siteId), 'Tahsilat', '', '', p.kind === 'pesin' ? 'Peşin / avans' : 'Havale / nakit', '', '', '', '', trn(p.amount), p.note || '', '']);
+    });
+    items.sort(function (a, b) { return a[0].localeCompare(b[0]); });
+    var f = figs(state.filter);
+    var sumRows = [['Net hakediş', f.net], ['Tahsil edilen ve mahsup edilen', f.tahsil], ['Kalan alacak', f.alacak], ['Toplam harcama (KDV dahil)', f.giden], ['İndirilecek KDV', f.gidenKdv], ['Kâr (KDV hariç)', f.kar]];
+    var csv = '﻿' + [head].concat(items).map(function (r) { return r.map(csvCell).join(';'); }).join('\r\n') + '\r\n\r\n' +
+      sumRows.map(function (r) { return ';;;;;;;;;' + csvCell(r[0]) + ';' + trn(r[1]); }).join('\r\n');
+    var nm = state.filter === 'all' ? 'tum-santiyeler' : (siteName(state.filter).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'santiye');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'santiye-defteri-' + nm + '-' + todayStr() + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    toast('Dosya hazır');
+  }
+
+  /* ---------- Başlangıç ---------- */
+  $('#fCat').innerHTML = CATS.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
+  $('#fDate').value = todayStr(); $('#pDate').value = todayStr(); $('#hDate').value = todayStr();
+  applyHkMode(); calcHk(); updateVatHint(); updatePaidHint(); render();
+
+  /* ---------- Veritabanı (Supabase) ---------- */
+  var reloaders = {};
+  function poke(name) { if (reloaders[name]) reloaders[name](); }
+  function makeDb(sb) {
+    var T = 'records';
+    function snap(rows) {
+      var docs = rows.map(function (r) { return { id: r.id, exists: true, data: function () { return r.data || {}; } }; });
+      return { docs: docs, size: docs.length, empty: !docs.length };
+    }
+    return {
+      restore: function (rows) {
+        var chunks = [];
+        for (var q = 0; q < rows.length; q += 200) chunks.push(rows.slice(q, q + 200));
+        return chunks.reduce(function (p, ch) {
+          return p.then(function () {
+            return sb.from(T).upsert(ch, { onConflict: 'id' }).then(function (r) { if (r.error) throw r.error; });
+          });
+        }, Promise.resolve()).then(function () { Object.keys(reloaders).forEach(function (n) { poke(n); }); });
+      },
+      collection: function (name) {
+        return {
+          onSnapshot: function (next, error) {
+            var closed = false, busy = false, again = false, ch = null;
+            function load() {
+              if (closed) return;
+              if (busy) { again = true; return; }
+              busy = true;
+              sb.from(T).select('id,data').eq('coll', name).then(function (res) {
+                busy = false;
+                if (closed) return;
+                if (res.error) { if (error) error({ code: 'unavailable', message: res.error.message }); }
+                else next(snap(res.data || []));
+                if (again) { again = false; load(); }
+              }, function (e) {
+                busy = false;
+                if (!closed && error) error({ code: 'unavailable', message: String((e && e.message) || e) });
+              });
+            }
+            reloaders[name] = load;
+            load();
+            try {
+              ch = sb.channel('rt-' + name).on('postgres_changes', { event: '*', schema: 'public', table: T, filter: 'coll=eq.' + name }, load).subscribe();
+            } catch (e) { ch = null; }
+            var timer = setInterval(load, 25000);
+            function vis() { if (document.visibilityState === 'visible') load(); }
+            document.addEventListener('visibilitychange', vis);
+            return function () {
+              closed = true; clearInterval(timer);
+              document.removeEventListener('visibilitychange', vis);
+              if (reloaders[name] === load) delete reloaders[name];
+              if (ch) { try { sb.removeChannel(ch); } catch (e) {} }
+            };
+          },
+          add: function (data) {
+            return sb.from(T).insert({ coll: name, data: data }).select('id').single().then(function (res) {
+              if (res.error) throw res.error;
+              poke(name);
+              return { id: res.data.id };
+            });
+          }
+        };
+      },
+      doc: function (path) {
+        var k = path.indexOf('/'), name = path.slice(0, k), id = path.slice(k + 1);
+        return {
+          update: function (patch) {
+            return sb.from(T).select('data').eq('id', id).single().then(function (r) {
+              if (r.error) throw r.error;
+              var merged = Object.assign({}, r.data.data || {}, patch);
+              return sb.from(T).update({ data: merged, updated_at: new Date().toISOString() }).eq('id', id);
+            }).then(function (r) { if (r && r.error) throw r.error; poke(name); });
+          },
+          delete: function () {
+            return sb.from(T).delete().eq('id', id).then(function (r) { if (r.error) throw r.error; poke(name); });
+          }
+        };
+      }
+    };
+  }
+
+  /* ---------- Giriş ekranı ---------- */
+  var CONFIG = { url: '', key: '' };   // istersen buraya sabit yaz; boşsa ilk açılışta sorulur
+  var cfg = { url: CONFIG.url || store.get('sd.sbUrl') || '', key: CONFIG.key || store.get('sd.sbKey') || '' };
+  var sbClient = null, unsubs = [];
+  function lock(on) { document.body.classList.toggle('locked', on); $('#gate').hidden = !on; }
+  function gateMode(m, text) {
+    $('#gSetup').hidden = m !== 'setup'; $('#gLogin').hidden = m !== 'login';
+    $('#gMsg').textContent = text || ''; lock(true);
+    if (m === 'login') { $('#gReset').hidden = !!CONFIG.url; }
+  }
+  function sub(name, key) {
+    var u = state.db.collection(name).onSnapshot(function (snap) {
+      state[key] = snap.docs.map(function (d) { var o = Object.assign({}, d.data()); o.id = d.id; return o; });
+      state.loaded[key] = true; banner(''); render();
+    }, function () { banner('Kayıtlar okunamadı. İnternetini kontrol et.'); state.loaded[key] = true; render(); });
+    unsubs.push(u);
+  }
+  function enter() {
+    lock(false);
+    state.db = makeDb(sbClient);
+    ['sites', 'entries', 'payments', 'hakedis', 'works'].forEach(function (c) { state.loaded[c] = false; });
+    ['sites', 'entries', 'payments', 'hakedis', 'works'].forEach(function (c) { sub(c, c); });
+    render();
+  }
+  function leave() {
+    unsubs.forEach(function (u) { try { u(); } catch (e) {} }); unsubs = [];
+    state.db = null; state.sites = []; state.entries = []; state.payments = []; state.hakedis = []; state.works = [];
+    state.siteView = null; state.workView = null; state.tab = 'spend';
+  }
+  function connect() {
+    if (!window.supabase || !window.supabase.createClient) {
+      gateMode(cfg.url ? 'login' : 'setup', 'Gerekli kütüphane yüklenemedi. İnternetini kontrol edip sayfayı yenile.'); return;
+    }
+    try { sbClient = window.supabase.createClient(cfg.url, cfg.key); }
+    catch (e) { gateMode('setup', 'Bağlantı bilgisi geçersiz. Adresi ve anahtarı kontrol et.'); return; }
+    sbClient.auth.onAuthStateChange(function (ev) { if (ev === 'SIGNED_OUT') { leave(); gateMode('login'); } });
+    sbClient.auth.getSession().then(function (r) {
+      if (r.data && r.data.session) enter(); else gateMode('login');
+    }, function () { gateMode('login', 'Bağlanamadı. İnternetini kontrol et.'); });
+  }
+  $('#gSetup').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var u = $('#gUrl').value.trim().replace(/\/+$/, ''), k = $('#gKey').value.trim();
+    if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(u)) { $('#gMsg').textContent = 'Proje adresi https://xxxx.supabase.co biçiminde olmalı.'; return; }
+    if (/^sb_secret_/i.test(k)) { $('#gMsg').textContent = 'Bu gizli (secret) anahtar. Kullanma. "Publishable" anahtarı yapıştır.'; return; }
+    if (/^eyJ/.test(k)) {
+      try {
+        var role = JSON.parse(atob(k.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role;
+        if (role === 'service_role') { $('#gMsg').textContent = 'Bu gizli (service_role) anahtar. Kullanma. "anon" ya da "publishable" anahtarı yapıştır.'; return; }
+      } catch (e) {}
+    }
+    if (!/^sb_publishable_/i.test(k) && !/^eyJ/.test(k)) { $('#gMsg').textContent = 'Anahtar sb_publishable_ ile başlamalı. Yanlış yerden kopyalamış olabilirsin.'; return; }
+    if (k.length < 30) { $('#gMsg').textContent = 'Anahtar eksik görünüyor. Tamamını yapıştır.'; return; }
+    cfg = { url: u, key: k }; store.set('sd.sbUrl', u); store.set('sd.sbKey', k); connect();
+  });
+  $('#gLogin').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var btn = $('#gLoginBtn'), msg = $('#gMsg'); msg.textContent = '';
+    var email = $('#gEmail').value.trim(), pass = $('#gPass').value;
+    if (!email || !pass) { msg.textContent = 'E-posta ve şifreyi yaz.'; return; }
+    btn.disabled = true;
+    sbClient.auth.signInWithPassword({ email: email, password: pass }).then(function (r) {
+      btn.disabled = false;
+      if (r.error) { msg.textContent = /invalid/i.test(r.error.message) ? 'E-posta ya da şifre hatalı.' : 'Giriş yapılamadı: ' + r.error.message; return; }
+      $('#gPass').value = ''; enter();
+    }, function () { btn.disabled = false; msg.textContent = 'Bağlanamadı. İnternetini kontrol et.'; });
+  });
+  $('#gReset').addEventListener('click', function () {
+    store.set('sd.sbUrl', ''); store.set('sd.sbKey', ''); cfg = { url: '', key: '' }; $('#gUrl').value = ''; $('#gKey').value = ''; gateMode('setup');
+  });
+  $('#logout').addEventListener('click', function () { if (sbClient) sbClient.auth.signOut(); });
+
+  /* ---------- Yedek ---------- */
+  var COLLS = ['sites', 'works', 'entries', 'hakedis', 'payments'], pendingRestore = null;
+  function bkAge() { var t = Number(store.get('sd.lastBackup')) || 0; return t ? Math.floor((Date.now() - t) / 86400000) : null; }
+  function renderBackup() {
+    var age = bkAge(), total = 0;
+    COLLS.forEach(function (c) { total += state[c].length; });
+    $('#bkInfo').textContent = age === null
+      ? 'Bu cihazdan henüz yedek almadın. Yedek, tüm kayıtlarını tek dosyada saklar.'
+      : 'Bu cihazdan son yedek: ' + (age === 0 ? 'bugün' : age + ' gün önce') + '.';
+    var need = allLoaded() && !!state.db && total > 0 && (age === null || age >= 7);
+    $('#bkNotice').hidden = !need;
+    if (need) $('#bkNoticeText').textContent = age === null ? 'Henüz yedek almadın.' : 'Son yedeğin ' + age + ' gün önce.';
+  }
+  $('#bkDownload').addEventListener('click', function () {
+    if (!state.db) return;
+    var out = { app: 'santiye-defteri', version: 1, exportedAt: new Date().toISOString() };
+    COLLS.forEach(function (c) { out[c] = state[c].map(function (o) { var d = Object.assign({}, o); delete d.id; return { id: o.id, data: d }; }); });
+    var blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'santiye-defteri-yedek-' + todayStr() + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    store.set('sd.lastBackup', String(Date.now())); toast('Yedek hazır'); renderBackup();
+  });
+  $('#bkFile').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0], msg = $('#bkMsg');
+    msg.textContent = ''; $('#bkConfirm').hidden = true; pendingRestore = null;
+    e.target.value = '';
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var j = JSON.parse(rd.result);
+        if (!j || j.app !== 'santiye-defteri') throw new Error('bicim');
+        var rows = [], cnt = {};
+        COLLS.forEach(function (c) {
+          var arr = Array.isArray(j[c]) ? j[c] : []; cnt[c] = 0;
+          arr.forEach(function (it) {
+            if (it && it.id && it.data && typeof it.data === 'object') { rows.push({ id: String(it.id), coll: c, data: it.data }); cnt[c]++; }
+          });
+        });
+        if (!rows.length) throw new Error('bos');
+        pendingRestore = rows;
+        $('#bkSummary').textContent = cnt.sites + ' şantiye, ' + cnt.works + ' iş kalemi, ' + cnt.entries + ' harcama, ' + cnt.hakedis + ' hakediş, ' + cnt.payments + ' tahsilat bulundu. Aynı kayıtların üzerine yazılır, mevcut diğer kayıtlar silinmez.';
+        $('#bkConfirm').hidden = false;
+      } catch (err) { msg.textContent = 'Bu dosya geçerli bir yedek değil.'; }
+    };
+    rd.onerror = function () { msg.textContent = 'Dosya okunamadı.'; };
+    rd.readAsText(f);
+  });
+  $('#bkNo').addEventListener('click', function () { pendingRestore = null; $('#bkConfirm').hidden = true; });
+  $('#bkYes').addEventListener('click', function () {
+    if (!state.db || !pendingRestore) return;
+    var btn = $('#bkYes'), msg = $('#bkMsg'); btn.disabled = true; msg.textContent = '';
+    state.db.restore(pendingRestore).then(function () {
+      toast(pendingRestore.length + ' kayıt geri yüklendi'); pendingRestore = null; $('#bkConfirm').hidden = true;
+    }, function (err) { msg.textContent = 'Geri yüklenemedi. ' + (err && err.message ? err.message : ''); })
+      .then(function () { btn.disabled = false; });
+  });
+
+  if (cfg.url && cfg.key) connect(); else gateMode('setup');
+})();
+</script>
+</body>
+</html>
